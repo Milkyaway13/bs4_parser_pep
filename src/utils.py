@@ -15,6 +15,7 @@ def get_response(session, url):
         logging.exception(
             f"Возникла ошибка при загрузке страницы {url}", stack_info=True
         )
+        raise ValueError('Ничего не найдено')
 
 
 def find_tag(get_response, tag, attrs=None):
@@ -35,3 +36,4 @@ def make_soup(session, url):
         logging.exception(
             f"Возникла ошибка при загрузке страницы {url}", stack_info=True
         )
+        raise ValueError('Не удалось сварить супец')
