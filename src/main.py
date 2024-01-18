@@ -7,19 +7,17 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import (BASE_DIR, EXPECTED_STATUS, LXML, MAIN_DOC_URL,
-                       PATTERN_DOWNLOAD, PATTERN_LATEST_VERSION, PEP_DOC_URL)
+from constants import (BASE_DIR, EXPECTED_STATUS, LXML,
+                       MAIN_DOC_URL, PATTERN_DOWNLOAD, PATTERN_LATEST_VERSION,
+                       PEP_DOC_URL)
 from outputs import control_output
-from utils import find_tag, get_response
+from utils import find_tag, get_response, make_soup
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
     response = get_response(session, whats_new_url)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, features="lxml")
-
+    soup = make_soup(session, whats_new_url)
     main_div = find_tag(soup, "section", attrs={"id": "what-s-new-in-python"})
     div_with_ul = find_tag(main_div, "div", attrs={"class": "toctree-wrapper"})
 
@@ -45,19 +43,15 @@ def whats_new(session):
 
 def latest_versions(session):
     results = [("Ссылка на документацию", "Версия", "Статус")]
-    response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, "lxml")
+    soup = make_soup(session, MAIN_DOC_URL)
     sidebar = find_tag(soup, "div", {"class": "sphinxsidebarwrapper"})
     ul_tags = sidebar.find_all("ul")
-    print(ul_tags)
     for ul in ul_tags:
         if "All versions" in ul.text:
             a_tags = ul.find_all("a")
             break
     else:
-        raise Exception("Ничего не нашлось")
+        raise ValueError("Ничего не нашлось")
 
     results = []
     pattern = PATTERN_LATEST_VERSION
@@ -76,10 +70,7 @@ def latest_versions(session):
 
 def download(session):
     downloads_url = urljoin(MAIN_DOC_URL, "download.html")
-    response = get_response(session, downloads_url)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, "lxml")
+    soup = make_soup(session, downloads_url)
     main_tag = find_tag(soup, "div", {"role": "main"})
     table_tag = find_tag(main_tag, "table", {"class": "docutils"})
     pdf_a4_tag = find_tag(
@@ -88,7 +79,7 @@ def download(session):
     pdf_a4_link = pdf_a4_tag["href"]
     archive_url = urljoin(downloads_url, pdf_a4_link)
     filename = archive_url.split("/")[-1]
-
+    # Если вынести BASE_DIR в файл с константами, то падает тест
     downloads_dir = BASE_DIR / "downloads"
     downloads_dir.mkdir(exist_ok=True)
     archive_path = downloads_dir / filename
@@ -101,10 +92,7 @@ def download(session):
 
 
 def pep(session):
-    response = get_response(session, PEP_DOC_URL)
-    if response is None:
-        return
-    soup = BeautifulSoup(response.text, features=LXML)
+    soup = make_soup(session, PEP_DOC_URL)
     section_tag = find_tag(soup, "section", attrs={"id": "numerical-index"})
     tbody_tag = find_tag(section_tag, "tbody")
     tr_tags = tbody_tag.find_all("tr")

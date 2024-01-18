@@ -2,6 +2,7 @@ import csv
 import datetime as dt
 import logging
 
+from functools import partial
 from prettytable import PrettyTable
 
 from constants import BASE_DIR, DATETIME_FORMAT, ENCODING_CONST
@@ -9,12 +10,13 @@ from constants import BASE_DIR, DATETIME_FORMAT, ENCODING_CONST
 
 def control_output(results, cli_args):
     output = cli_args.output
-    if output == "pretty":
-        pretty_output(results)
-    elif output == "file":
-        file_output(results, cli_args)
-    else:
-        default_output(results)
+
+    output_functions = {
+        "pretty": pretty_output,
+        "file": partial(file_output, cli_args=cli_args),
+    }
+
+    output_functions.get(output, default_output)(results)
 
 
 def default_output(results):
